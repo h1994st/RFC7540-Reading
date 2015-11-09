@@ -243,27 +243,3 @@ Frame payload的大小被发送方所声明的`SETTINGS_MAX_FRAME_SIZE`值所限
 和HTTP/1一样，HTTP/2中的每一个header field都是一个键值对。header field在请求和响应中都会有，在server push中也会有
 
 header list里包含0个或多个header field。当在被传输的时候，一个header list被序列化放入一个header block
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
