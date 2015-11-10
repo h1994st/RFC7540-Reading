@@ -78,7 +78,7 @@ HTTP2-Settings: <base64url encoding of HTTP/2 SETTINGS payload>
 
 对于上文那个请求，服务器可能有两种响应：
 
-1. 服务器支持HTTP/2
+1. 服务器不支持HTTP/2
 
     ```
     HTTP/1.1 200 OK
@@ -90,7 +90,7 @@ HTTP2-Settings: <base64url encoding of HTTP/2 SETTINGS payload>
 
     此时，服务器必须(MUST)忽略`h2`这个标识符
 
-2. 服务器不支持HTTP/2
+2. 服务器支持HTTP/2
 
     ```
     HTTP/1.1 101 Switching Protocols
@@ -212,11 +212,11 @@ Frame header总长9字节，下面是每个字段的详解：
 |Length|24 bits|仅仅是payload的长度，单位字节，不包括Frame header自身的9字节。被视为一个unsigned 24-bit integer。大于2^14 (16384)的值绝对不能(MUST NOT)被设置，除非接受端有一个很大的`SETTINGS_MAX_FRAME_SIZE`值|
 |Type|8 bits|RFC 7540中定义了一些类型，但是还是有扩展空间的，任何实现都必须(MUST)忽视或者取消认可未知的Frame type|
 |R|1 bit|保留位，该位暂无意义，这一位在发送的时候必须(MUST)保持为`0x0`，接受的时候必须(MUST)忽视|
-|Stream Identifer|31 bits|被视为一个unsigned 31-bit integer，`0x0`是一个特殊的值，为一些与整个连接有关的Frame所预留的，而不是为某一个特定的Stream|
+|Stream Identifier|31 bits|被视为一个unsigned 31-bit integer，`0x0`是一个特殊的值，为一些与整个连接有关的Frame所预留的，而不是为某一个特定的Stream|
 
 ***(!!!: 那么似乎也是有可能可以将Length设置得很大，RFC 7540中并没有说大了会触发什么错误)***
 
-***(!!!: 此外根据Dr. Luo的建议，此处Length和Payload的真实长度也可以不相符，看看会发生什么)***
+***(!!!: 此外根据建议，此处Length和Payload的真实长度也可以不相符，看看会发生什么)***
 
 ### 4.2 Frame Size
 
