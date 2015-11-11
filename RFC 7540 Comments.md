@@ -242,4 +242,62 @@ Frame payload的大小被发送方所声明的`SETTINGS_MAX_FRAME_SIZE`值所限
 
 和HTTP/1一样，HTTP/2中的每一个header field都是一个键值对。header field在请求和响应中都会有，在server push中也会有
 
-header list里包含0个或多个header field。当在被传输的时候，一个header list被序列化放入一个header block
+header list里包含0个或多个header field。当在被传输的时候，一个header list被序列化放入一个header block，这个过程使用HTTP header compression。被序列化的header block被分成一个或多个字节序列，被称为header block fragment，这些header block fragment作为如下几种Frame的payload传输：
+
+- HEADERS Frame
+- PUSH_PROMISE Frame
+- CONTINUATION Frame
+
+Cookie这个header field以HTTP mapping的方式特殊对待
+
+***(???: HTTP mapping是啥)***
+
+接受端将会将这些header block fragment重新组装成header block，然后解压缩，重新构成header list
+
+一个完整的header block由下列任意一个组成：
+
+- 一个单独的携带END\_HEADERS flag的HEADERS Frame或PUSH\_PROMISE Frame
+- 一个HEADERS Frame货PUSH\_PROMISE Frame，后面跟着一个或多个CONTINUATION Frame，要求最后一个CONTINUATION Frame携带END\_HEADERS flag
+
+Header的压缩是有状态的，一个压缩上下文和一个解压缩上下文将会被用于整个连接，解码错误必须(MUST)被视为***ERR: connection error(COMPRESSION_ERROR)***
+
+***(???: 这个状态是什么意思？有对应的状态图么？)***
+
+每一个header block被当成一个离散的单元来处理，header block们必须(MUST)作为一个连续的Frame序列被传输，中间不允许夹杂任何其它类型的Frame以及来自任何其它Stream的Frame。这个包含HEADERS Frame或CONTINUATION Frame的序列中的最后一个Frame(可能是HEADERS Frame，也可能是CONTINUATION Frame)必须携带END\_HEADERS flag。包含PUSH_PROMISE Frame或CONTINUATION Frame的亦是如此。这样使得一个header block在逻辑上等价于一个单独的Frame
+
+上文提到header block fragment只能作为三种Frame的payload来传输，原因是这些携带数据的Frame会更改接受端所维护的压缩上下文
+
+***(???: 还是那个问题，这个状态是啥)***
+
+终端收到HEADERS Frame、PUSH_PROMISE Frame或CONTINUATION Frame后，需要中心组装header block，并进行解压缩，不管这些Frame是否被取消
+
+如果接收者没有解压缩一个header block，接受者必须(MUST)关闭一个这个链接，并发出***ERR: connection error(COMPRESSION_ERROR)***
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
