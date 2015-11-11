@@ -98,12 +98,12 @@
 
 - After sending the GOAWAY frame for an error condition, the endpoint MUST close the TCP connection.
 
-## 5.4.2 Stream Error Handling
+## Section 5.4.2 Stream Error Handling
 
 - A RST\_STREAM is the last frame that an endpoint can send on a stream. The peer that sends the RST\_STREAM frame MUST be prepared to receive any frames that were sent or enqueued for sending by the remote peer.
 - To avoid looping, an endpoint MUST NOT send a RST\_STREAM in response to a RST\_STREAM frame.
 
-## 5.5 Extending HTTP/2
+## Section 5.5 Extending HTTP/2
 
 - Implementations MUST ignore unknown or unsupported values in all extensible protocol elements.
 - Implementations MUST discard frames that have unknown or unsupported types.
@@ -111,7 +111,7 @@
 - Extensions that could change the semantics of existing protocol components MUST be negotiated before being used.
 - If a setting is used for extension negotiation, the initial value MUST be defined in such a fashion that the extension is initially disabled.
 
-## 6.1 DATA
+## Section 6.1 DATA
 
 DATA Frame
 
@@ -121,7 +121,7 @@ DATA Frame
 - If a DATA frame is received whose stream is not in "open" or "half-closed (local)" state, the recipient MUST respond with a stream error (Section 5.4.2) of type STREAM\_CLOSED.
 - If the length of the padding is the length of the frame payload or greater, the recipient MUST treat this as a connection error (Section 5.4.1) of type PROTOCOL_ERROR.
 
-## 6.2 HEADERS
+## Section 6.2 HEADERS
 
 HEADERS Frame
 
@@ -132,14 +132,14 @@ HEADERS Frame
 - If a HEADERS frame is received whose stream identifier field is 0x0, the recipient MUST respond with a connection error (Section 5.4.1) of type PROTOCOL_ERROR.
 - Padding that exceeds the size remaining for the header block fragment MUST be treated as a PROTOCOL_ERROR.
 
-## 6.3 PRIORITY
+## Section 6.3 PRIORITY
 
 PRIORITY Frame
 
 - If a PRIORITY frame is received with a stream identifier of 0x0, the recipient MUST respond with a connection error (Section 5.4.1) of type PROTOCOL_ERROR.
 - A PRIORITY frame with a length other than 5 octets MUST be treated as a stream error (Section 5.4.2) of type FRAME\_SIZE\_ERROR.
 
-## 6.4 RST_STREAM
+## Section 6.4 RST_STREAM
 
 RST_STREAM Frame
 
@@ -151,7 +151,7 @@ RST_STREAM Frame
 - If a RST\_STREAM frame identifying an idle stream is received, the recipient MUST treat this as a connection error (Section 5.4.1) of type PROTOCOL\_ERROR.
 - A RST\_STREAM frame with a length other than 4 octets MUST be treated as a connection error (Section 5.4.1) of type FRAME\_SIZE\_ERROR.
 
-## 6.5 SETTINGS
+## Section 6.5 SETTINGS
 
 SETTINGS Frame
 
@@ -165,7 +165,7 @@ SETTINGS Frame
 - A badly formed or incomplete SETTINGS frame MUST be treated as a connection error (Section 5.4.1) of type PROTOCOL_ERROR.
 - A SETTINGS frame with a length other than a multiple of 6 octets MUST be treated as a connection error (Section 5.4.1) of type FRAME\_SIZE\_ERROR.
 
-## 6.5.2 Defined SETTINGS Parameters
+## Section 6.5.2 Defined SETTINGS Parameters
 
 - SETTINGS\_ENABLE\_PUSH (0x2) parameter:
     - An endpoint MUST NOT send a PUSH_PROMISE frame if it receives this parameter set to a value of 0.
@@ -178,14 +178,14 @@ SETTINGS Frame
     - Values outside this range MUST be treated as a connection error (Section 5.4.1) of type PROTOCOL_ERROR.
 - An endpoint that receives a SETTINGS frame with any unknown or unsupported identifier MUST ignore that setting.
 
-## 6.5.3 Settings Synchronization
+## Section 6.5.3 Settings Synchronization
 
 - In order to provide such synchronization timepoints, the recipient of a SETTINGS frame in which the ACK flag is not set MUST apply the updated parameters as soon as possible upon receipt.
 - The values in the SETTINGS frame MUST be processed in the order they appear, with no other frame processing between values.
 - Unsupported parameters MUST be ignored.
 - Once all values have been processed, the recipient MUST immediately emit a SETTINGS frame with the ACK flag set.
 
-## 6.6 PUSH_PROMISE
+## Section 6.6 PUSH_PROMISE
 
 PUSH_PROMISE Frame
 
@@ -201,7 +201,7 @@ PUSH_PROMISE Frame
 - However, an endpoint that has sent RST\_STREAM on the associated stream MUST handle PUSH\_PROMISE frames that might have been created before the RST\_STREAM frame is received and processed.
 - A receiver MUST treat the receipt of a PUSH\_PROMISE that promises an illegal stream identifier (Section 5.1.1) as a connection error (Section 5.4.1) of type PROTOCOL\_ERROR.
 
-## 6.7 PING
+## Section 6.7 PING
 
 PING Frame
 
@@ -214,27 +214,185 @@ opaque data in the payload.
 - If a PING frame is received with a stream identifier field value other than 0x0, the recipient MUST respond with a connection error (Section 5.4.1) of type PROTOCOL_ERROR.
 - Receipt of a PING frame with a length field value other than 8 MUST be treated as a connection error (Section 5.4.1) of type FRAME\_SIZE\_ERROR.
 
+## Section 6.8 GOAWAY
 
+GOAWAY Frame
 
+- Receivers of a GOAWAY frame MUST NOT open additional streams on the connection, although a new connection can be established for new streams.
+- The GOAWAY frame applies to the connection, not a specific stream. An endpoint MUST treat a GOAWAY frame with a stream identifier other than 0x0 as a connection error (Section 5.4.1) of type PROTOCOL_ERROR.
+- Endpoints MUST NOT increase the value they send in the last stream identifier, since the peers might already have retried unprocessed requests on another connection.
+- For instance, HEADERS, PUSH_PROMISE, and CONTINUATION frames MUST be minimally processed to ensure the state maintained for header compression is consistent (see Section 4.3); similarly, DATA frames MUST be counted toward the connection flow-control window.
+- Logged or otherwise persistently stored debug data MUST have adequate safeguards to prevent unauthorized access.
 
+## Section 6.9 WINDOW_UPDATE
 
+WINDOW_UPDATE Frame
 
+- Frames that are exempt from flow control MUST be accepted and processed, unless the receiver is unable to assign resources to handling the frame.
+- A receiver MUST treat the receipt of a WINDOW\_UPDATE frame with an flow-control window increment of 0 as a stream error (Section 5.4.2) of type PROTOCOL\_ERROR; errors on the connection flow-control window MUST be treated as a connection error (Section 5.4.1).
+- WINDOW\_UPDATE can be sent by a peer that has sent a frame bearing the END\_STREAM flag. This means that a receiver could receive a WINDOW_UPDATE frame on a "half-closed (remote)" or "closed" stream. A receiver MUST NOT treat this as an error (see Section 5.1).
+- A receiver that receives a flow-controlled frame MUST always account for its contribution against the connection flow-control window, unless the receiver treats this as a connection error (Section 5.4.1).
+- A WINDOW\_UPDATE frame with a length other than 4 octets MUST be treated as a connection error (Section 5.4.1) of type FRAME\_SIZE_ERROR.
 
+## Section 6.9.1 The Flow-Control Window
 
+- Two flow-control windows are applicable: the stream flow-control window and the connection flow-control window.  The sender MUST NOT send a flow-controlled frame with a length that exceeds the space available in either of the flow-control windows advertised by the receiver.
+- A sender MUST NOT allow a flow-control window to exceed 2^31-1 octets. If a sender receives a WINDOW\_UPDATE that causes a flow- control window to exceed this maximum, it MUST terminate either the stream or the connection, as appropriate.  For streams, the sender sends a RST\_STREAM with an error code of FLOW\_CONTROL\_ERROR; for the connection, a GOAWAY frame with an error code of FLOW\_CONTROL\_ERROR is sent.
 
+## Section 6.9.2 Initial Flow-Control Window Size
 
+- When the value of SETTINGS\_INITIAL\_WINDOW_SIZE changes, a receiver MUST adjust the size of all stream flow-control windows that it maintains by the difference between the new value and the old value.
+- A change to SETTINGS\_INITIAL\_WINDOW\_SIZE can cause the available space in a flow-control window to become negative. A sender MUST track the negative flow-control window and MUST NOT send new flow-controlled frames until it receives WINDOW\_UPDATE frames that cause the flow-control window to become positive.
+- An endpoint MUST treat a change to SETTINGS\_INITIAL\_WINDOW\_SIZE that causes any flow-control window to exceed the maximum size as a connection error (Section 5.4.1) of type FLOW\_CONTROL\_ERROR.
 
+## Section 6.9.3 Reducing the Stream Window Size
 
+- However, the receiver MUST be prepared to receive data that exceeds this window size, since the sender might send data that exceeds the lower limit prior to processing the SETTINGS frame.
 
+## Section 6.10 CONTINUATION
 
+CONTINUATION Frame
 
+- END_HEADERS (0x4) flag:
+    - If the END_HEADERS bit is not set, this frame MUST be followed by another CONTINUATION frame.
+    - A receiver MUST treat the receipt of any other type of frame or a frame on a different stream as a connection error (Section 5.4.1) of type PROTOCOL_ERROR.
+- CONTINUATION frames MUST be associated with a stream.
+- If a CONTINUATION frame is received whose stream identifier field is 0x0, the recipient MUST respond with a connection error (Section 5.4.1) of type PROTOCOL_ERROR.
+- A CONTINUATION frame MUST be preceded by a HEADERS, PUSH\_PROMISE or CONTINUATION frame without the END\_HEADERS flag set.
+- A recipient that observes violation of this rule MUST respond with a connection error (Section 5.4.1) of type PROTOCOL_ERROR.
 
+## Section 7 Error Codes
 
+- Unknown or unsupported error codes MUST NOT trigger any special behavior.
 
+## Section 8.1 HTTP Request/Response Exchanges
 
+- Other frames (from any stream) MUST NOT occur between the HEADERS frame and any CONTINUATION frames that might follow.
+- HTTP/2 uses DATA frames to carry message payloads. The "chunked" transfer encoding defined in Section 4.1 of [RFC7230] MUST NOT be used in HTTP/2.
+- An endpoint that receives a HEADERS frame without the END_STREAM flag set after receiving a final (non- informational) status code MUST treat the corresponding request or response as malformed (Section 8.1.2.6).
+- Clients MUST NOT discard responses as a result of receiving such a RST_STREAM, though clients can always discard responses at their discretion for other reasons.
 
+## Section 8.1.2 HTTP Header Fields
 
+- However, header field names MUST be converted to lowercase prior to their encoding in HTTP/2.
+- A request or response containing uppercase header field names MUST be treated as malformed (Section 8.1.2.6).
 
+## Section 8.1.2.1 Pseudo-Header Fields
 
+- Pseudo-header fields are not HTTP header fields.  Endpoints MUST NOT generate pseudo-header fields other than those defined in this document.
+- Pseudo-header fields defined for requests MUST NOT appear in responses; pseudo-header fields defined for responses MUST NOT appear in requests.
+- Pseudo-header fields MUST NOT appear in trailers.
+- Endpoints MUST treat a request or response that contains undefined or invalid pseudo-header fields as malformed (Section 8.1.2.6).
+- All pseudo-header fields MUST appear in the header block before regular header fields.
+- Any request or response that contains a pseudo-header field that appears in a header block after a regular header field MUST be treated as malformed (Section 8.1.2.6).
 
+## Section 8.1.2.2 Connection-Specific Header Fields
 
+- An endpoint MUST NOT generate an HTTP/2 message containing connection-specific header fields; any message containing connection-specific header fields MUST be treated as malformed (Section 8.1.2.6).
+- The only exception to this is the TE header field, which MAY be present in an HTTP/2 request; when it is, it MUST NOT contain any value other than "trailers". (此句含有MAY)
+
+## Section 8.1.2.3 Request Pseudo-Header Fields
+
+- ":authority" pseudo-header field:
+    - The authority MUST NOT include the deprecated "userinfo" subcomponent for "http" or "https" schemed URIs.
+    - To ensure that the HTTP/1.1 request line can be reproduced accurately, this pseudo-header field MUST be omitted when translating from an HTTP/1.1 request that has a request target in origin or asterisk form (see [RFC7230], Section 5.3).
+    - An intermediary that converts an HTTP/2 request to HTTP/1.1 MUST create a Host header field if one is not present in a request by copying the value of the ":authority" pseudo-header field.
+- ":path" pseudo-header field:
+    - This pseudo-header field MUST NOT be empty for "http" or "https" URIs; "http" or "https" URIs that do not contain a path component MUST include a value of '/'.
+    - The exception to this rule is an OPTIONS request for an "http" or "https" URI that does not include a path component; these MUST include a ":path" pseudo-header field with a value of '*' (see [RFC7230], Section 5.3.4).
+    - All HTTP/2 requests MUST include exactly one valid value for the ":method", ":scheme", and ":path" pseudo-header fields, unless it is a CONNECT request (Section 8.3).
+
+## Section 8.1.2.4 Response Pseudo-Header Fields
+
+- For HTTP/2 responses, a single ":status" pseudo-header field is defined that carries the HTTP status code field (see [RFC7231], Section 6). This pseudo-header field MUST be included in all responses; otherwise, the response is malformed (Section 8.1.2.6).
+
+## Section 8.1.2.5 Compressing the Cookie Header Field
+
+- If there are multiple Cookie header fields after decompression, these MUST be concatenated into a single octet string using the two-octet delimiter of 0x3B, 0x20 (the ASCII string "; ") before being passed into a non-HTTP/2 context, such as an HTTP/1.1 connection, or a generic HTTP server application.
+
+## Section 8.1.2.6 Malformed Requests and Responses
+
+- Intermediaries that process HTTP requests or responses (i.e., any intermediary not acting as a tunnel) MUST NOT forward a malformed request or response.
+- Malformed requests or responses that are detected MUST be treated as a stream error (Section 5.4.2) of type PROTOCOL\_ERROR.
+- Clients MUST NOT accept a malformed response.
+
+## Section 8.1.4 Request Reliability Mechanisms in HTTP/2
+
+- A server MUST NOT indicate that a stream has not been processed unless it can guarantee that fact.
+- If frames that are on a stream are passed to the application layer for any stream, then REFUSED_STREAM MUST NOT be used for that stream, and a GOAWAY frame MUST include a stream identifier that is greater than or equal to the given stream identifier.
+
+## Section 8.2 Server Push
+
+- Promised requests MUST be cacheable (see [RFC7231], Section 4.2.3), MUST be safe (see [RFC7231], Section 4.2.1), and MUST NOT include a request body.
+- Clients that receive a promised request that is not cacheable, that is not known to be safe, or that indicates the presence of a request body MUST reset the promised stream with a stream error (Section 5.4.2) of type PROTOCOL_ERROR.
+- Pushed responses that are not cacheable MUST NOT be stored by any HTTP cache.
+- The server MUST include a value in the ":authority" pseudo-header field for which the server is authoritative (see Section 10.1).
+- A client MUST treat a PUSH\_PROMISE for which the server is not authoritative as a stream error (Section 5.4.2) of type PROTOCOL\_ERROR.
+- A client cannot push.  Thus, servers MUST treat the receipt of a PUSH\_PROMISE frame as a connection error (Section 5.4.1) of type PROTOCOL\_ERROR.
+- Clients MUST reject any attempt to change the SETTINGS\_ENABLE\_PUSH setting to a value other than 0 by treating the message as a connection error (Section 5.4.1) of type PROTOCOL\_ERROR.
+
+## Section 8.2.1 Push Requests
+
+- The header fields in PUSH_PROMISE and any subsequent CONTINUATION frames MUST be a valid and complete set of request header fields (Section 8.1.2.3).
+- The server MUST include a method in the ":method" pseudo-header field that is safe and cacheable.
+- If a client receives a PUSH\_PROMISE that does not include a complete and valid set of header fields or the ":method" pseudo-header field identifies a method that is not safe, it MUST respond with a stream error (Section 5.4.2) of type PROTOCOL\_ERROR.
+- PUSH_PROMISE frames MUST NOT be sent by the client.
+- PUSH_PROMISE frames can be sent by the server in response to any client-initiated stream, but the stream MUST be in either the "open" or "half-closed (remote)" state with respect to the server.
+
+## Section 8.2.2 Push Responses
+
+- Clients receiving a pushed response MUST validate that either the server is authoritative (see Section 10.1) or the proxy that provided the pushed response is configured for the corresponding request.
+
+## Section 8.3 The CONNECT Method
+
+- The ":scheme" and ":path" pseudo-header fields MUST be omitted.
+- Frame types other than DATA or stream management frames (RST\_STREAM, WINDOW\_UPDATE, and PRIORITY) MUST NOT be sent on a connected stream and MUST be treated as a stream error (Section 5.4.2) if received.
+- Correspondingly, a proxy MUST send a TCP segment with the RST bit set if it detects an error with the stream or the HTTP/2 connection.
+
+## Section 9.1.1 Connection Reuse
+
+- The certificate presented by the server MUST satisfy any checks that the client would perform when forming a new TLS connection for the host in the URI.
+
+## Section 9.1.2 The 421 (Misdirected Request) Status Code
+
+- This status code MUST NOT be generated by proxies.
+
+## Section 9.2 Use of TLS Features
+
+- Implementations of HTTP/2 MUST use TLS version 1.2 [TLS12] or higher for HTTP/2 over TLS.
+- The TLS implementation MUST support the Server Name Indication (SNI) [TLS-EXT] extension to TLS.
+- HTTP/2 clients MUST indicate the target domain name when negotiating TLS.
+
+## Section 9.2.1 TLS 1.2 Features
+
+- A deployment of HTTP/2 over TLS 1.2 MUST disable compression.
+- A deployment of HTTP/2 over TLS 1.2 MUST disable renegotiation.
+- An endpoint MUST treat a TLS renegotiation as a connection error (Section 5.4.1) of type PROTOCOL_ERROR.
+- An endpoint MAY use renegotiation to provide confidentiality protection for client credentials offered in the handshake, but any renegotiation MUST occur prior to sending the connection preface.
+- Implementations MUST support ephemeral key exchange sizes of at least 2048 bits for cipher suites that use ephemeral finite field Diffie- Hellman (DHE) [TLS12] and 224 bits for cipher suites that use ephemeral elliptic curve Diffie-Hellman (ECDHE) [RFC4492].
+- Clients MUST accept DHE sizes of up to 4096 bits.
+
+## Section 9.2.2 TLS 1.2 Cipher Suites
+
+- Implementations MUST NOT generate this error in reaction to the negotiation of a cipher suite that is not on the black list.
+- To avoid this problem causing TLS handshake failures, deployments of HTTP/2 that use TLS 1.2 MUST support TLS\_ECDHE\_RSA\_WITH\_AES\_128\_GCM_SHA256 [TLS-ECDHE] with the P-256 elliptic curve [FIPS186].
+
+## Section 10.3 Intermediary Encapsulation Attacks
+
+- Requests or responses containing invalid header field names MUST be treated as malformed (Section 8.1.2.6).
+- Any request or response that contains a character not permitted in a header field value MUST be treated as malformed (Section 8.1.2.6). Valid characters are defined by the "field-content" ABNF rule in Section 3.2 of [RFC7230].
+
+## Section 10.4 Cacheability of Pushed Responses
+
+- Where multiple tenants share space on the same server, that server MUST ensure that tenants are not able to push representations of resources that they do not have authority over.
+- Pushed responses for which an origin server is not authoritative (see Section 10.1) MUST NOT be used or cached.
+
+## Section 10.5.1 Limits on Header Block Size
+
+- The header block MUST be processed to ensure a consistent connection state, unless the connection is closed.
+
+## Section 10.6 Use of Compression
+
+- Implementations communicating on a secure channel MUST NOT compress content that includes both confidential and attacker-controlled data unless separate compression dictionaries are used for each source of data.
+- Compression MUST NOT be used if the source of data cannot be reliably determined.
+- Generic stream compression, such as that provided by TLS, MUST NOT be used with HTTP/2 (see Section 9.2).
