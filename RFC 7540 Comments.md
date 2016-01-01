@@ -273,6 +273,61 @@ Header的压缩是有状态的，一个压缩上下文和一个解压缩上下�
 
 如果接收者没有解压缩一个header block，接受者必须(MUST)关闭一个这个链接，并发出***ERR: connection error(COMPRESSION_ERROR)***
 
+## 5 Streams and Multiplexing
+
+Stream是独立的、双向的，有如下重要的特性：
+
+- 一个单独的HTTP/2连接可以包含多个并发的stream，任何一个终端都允许来自不同Stream的相互交错的Frame
+- Stream可以被单方面使用，也可以由client或server共享
+- Stream可以由任何一端关闭
+- Frame在Stream上的发送顺序很重要。接收方将会按照他们接受这些Frame的顺序来处理。值得强调的是，HEADERS Frame和DATA Frame的顺序在语义上更加重要
+- Stream由其整数编号来区分。Stream的标识符由它的发起方来分配
+
+## 5.1 Stream States
+
+***(!!!: 状态图很重要)***
+
+```
+                         +--------+
+                 send PP |        | recv PP
+                ,--------|  idle  |--------.
+               /         |        |         \
+              v          +--------+          v
+       +----------+          |           +----------+
+       |          |          | send H /  |          |
+,------| reserved |          | recv H    | reserved |------.
+|      | (local)  |          |           | (remote) |      |
+|      +----------+          v           +----------+      |
+|          |             +--------+             |          |
+|          |     recv ES |        | send ES     |          |
+|   send H |     ,-------|  open  |-------.     | recv H   |
+|          |    /        |        |        \    |          |
+|          v   v         +--------+         v   v          |
+|      +----------+          |           +----------+      |
+|      |   half   |          |           |   half   |      |
+|      |  closed  |          | send R /  |  closed  |      |
+|      | (remote) |          | recv R    | (local)  |      |
+|      +----------+          |           +----------+      |
+|           |                |                 |           |
+|           | send ES /      |       recv ES / |           |
+|           | send R /       v        send R / |           |
+|           | recv R     +--------+   recv R   |           |
+| send R /  `----------->|        |<-----------'  send R / |
+| recv R                 | closed |               recv R   |
+`----------------------->|        |<----------------------'
+                         +--------+
+    send:   endpoint sends this frame
+    recv:   endpoint receives this frame
+
+    H:  HEADERS frame (with implied CONTINUATIONs)
+    PP: PUSH_PROMISE frame (with implied CONTINUATIONs)
+    ES: END_STREAM flag
+    R:  RST_STREAM frame
+```
+
+CONTINUATION Frame不会造成状态变化，因为他们可能是HEADERS Frame或PUSH_PROMISE Frame之后的一部分
+
+携带END_STREAM flag的Frame会造成状态变化
 
 
 
